@@ -1,5 +1,5 @@
 
-# Alex Gromadzkio
+# Alex Gromadzki
 # Titanic Homework Assignment
 
 library(tidyverse)
@@ -17,14 +17,33 @@ testing_data <- read_csv("test.csv")
 # just going to get rid of cabin, seems like i can logically (explained later on, especially since i don't know specifics
     # of cabin tiers)
 
-plot(training_data,pch=20,cex=.2)
-training_data2 <- mutate(training_data, 
-                  Cabin2 = if_else(is.nan(Cabin), true = 0, false = 1),
-                  Age2 = if_else(is.nan(Age), true = 0, false = 1),
-                  SibSp2 = if_else(is.nan(SibSp), true = 0, false = 1))
+# training_data2 <- mutate(training_data,                                       # why doesn't this work?
+#                   Cabin2 = if_else(is.nan(Cabin), true = 0, false = 1),
+#                   Age2 = if_else(is.nan(Age), true = 0, false = 1),
+
+training_data2 <- mutate(training_data,
+                        Cabin2 = if_else(Cabin=="NA", true = 0, false = 1, missing = 0),
+                        Age2 = if_else(Age=="NA", true = 0, false = 1, missing = 0))
+# this sets all the cases where there is a value equal to one and all of the ones without a value equal to zero
 
 
-training_data
+
+# in order to use all of the NA's, I am going to calculate the mean age of all present and insert that so as not
+# to skew the coefficients in one direction or another
+
+
+all_with_ages <- training_data2[(training_data2$Age2 == 1),]
+m.ages <- mean(all_with_ages$Age)
+
+training_data3 <- mutate(training_data,
+                         Cabin = if_else(Cabin=="NA", true = "NONE", false = Cabin, missing = "NONE"),
+                         Age = if_else(Age=="NA", true = m.ages, false = Age, missing = m.ages))
+
+
+
+# is.na(NA)
+
+
 
 # =========Variables in original data and some heuristics============
 # NOTE: categotical (non-continuous) is indicated by CAT
@@ -45,13 +64,13 @@ training_data
           # again, this is an interaction term thing that we never covered how to do in R
 
 #==============Attempt====================
-training_data$Pclass <- factor(training_data$Pclass)
-training_data$Sex <- factor(training_data$Sex)
-training_data$Age <- factor(training_data$Age)
-training_data$SibSp <- factor(training_data$SibSp)
-training_data$Parch <- factor(training_data$Parch)
-training_data$Cabin <- factor(training_data$Cabin)
-training_data$Embarked <- factor(training_data$Embarked)
+training_data3$Pclass <- factor(training_data3$Pclass)
+training_data3$Sex <- factor(training_data3$Sex)
+training_data3$Age <- factor(training_data3$Age)
+training_data3$SibSp <- factor(training_data3$SibSp)
+training_data3$Parch <- factor(training_data3$Parch)
+training_data3$Cabin <- factor(training_data3$Cabin)
+training_data3$Embarked <- factor(training_data3$Embarked)
 
 # For the first iteration of the model, I assume 
 # that room number and passenger class likely were correlated (passenger class simpler to deal with so removed Room)
@@ -59,18 +78,18 @@ training_data$Embarked <- factor(training_data$Embarked)
 
 # NOTE: many of the entries are not entirely complete (missing one or more fields)
 
-training_glm1 <- glm(Survived ~ .-Name -Ticket -Cabin, data=training_data)
+training_glm1 <- glm(Survived ~ .-Name -Ticket -Cabin, data=training_data3)
 summary(training_glm1)
 
 # My intuition is telling me that without being able to use any interaction terms, 
   #I should get rid of some potentially similar variables.
     # First however, lets just assume that without any other background the destinations were the same
 
-training_glm2 <- glm(Survived ~ .-Name -Ticket -Cabin -Embarked, data=training_data)
+training_glm2 <- glm(Survived ~ .-Name -Ticket -Cabin -Embarked, data=training_data3)
 summary(training_glm2)
 
 # how about something else... multitasking? sure why not.  trying ticket price vs class and the family status variables
 
-training_glm3 <- glm(Survived ~ .-Name -Ticket -Cabin -Embarked -Pclass -SibSp -Parch, data=training_data)
+training_glm3 <- glm(Survived ~ .-Name -Ticket -Cabin -Embarked -Pclass -SibSp -Parch, data=training_data3)
 summary(training_glm3)
 
